@@ -173,11 +173,16 @@ a { color: inherit; text-decoration: none; }
 .topbar .icon-button:hover { color: var(--gold-2); border-color: var(--gold-2); }
 .practice-name {
   display: flex; align-items: center; gap: 10px;
-  min-height: 34px; padding: 6px 34px;
+  min-height: 48px; padding: 8px 34px;
   border-bottom: 1px solid rgba(212,175,55,.25);
   background: linear-gradient(90deg, #0b0c0f, #101820 60%, #0a2c33);
   color: var(--gold-2); font-size: 11px; font-weight: 700;
   letter-spacing: 1.4px; text-transform: uppercase;
+}
+.practice-name strong {
+  font-size: 20px; line-height: 1; letter-spacing: .3px; font-weight: 800;
+  color: #ffe6a3; text-transform: none;
+  text-shadow: 0 0 14px rgba(53,189,209,.45);
 }
 .practice-name::before {
   content: ""; width: 18px; height: 1px; flex: none;
@@ -665,6 +670,7 @@ html[data-theme="dark"] .chat-message.mine .chat-bubble { background: var(--petr
   .source-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .page-footer { flex-direction: column; }
   .practice-name { padding-left: 18px; padding-right: 18px; }
+  .practice-name strong { font-size: 17px; }
   .chat-header, .chat-rule-bar, .chat-suggestions, .chat-composer, .chat-footnote { padding-left: 14px; padding-right: 14px; }
   .chat-mode { display: none; }
   .chat-messages { height: 340px; padding: 16px 13px; }
