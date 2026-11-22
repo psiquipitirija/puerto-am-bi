@@ -8,7 +8,9 @@ Dashboard corporativo conectado a un archivo Excel real. Los indicadores, gráfi
 
 - **Repositorio:** https://github.com/psiquipitirija/puerto-am-bi
 - **Demo pública temporal:** https://patients-conclusions-potentially-homeland.trycloudflare.com
-- El enlace HTTPS funciona mientras sigan activos el servidor local y el túnel de Cloudflare. Para una URL permanente, sigue `DEPLOY.md` y crea el Web Service en Render (el repo ya trae `render.yaml`).
+- El enlace HTTPS funciona mientras sigan activos el servidor local y el túnel de Cloudflare. Para una URL permanente, haz clic en el botón o sigue `DEPLOY.md` (el repo ya trae `render.yaml`).
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/psiquipitirija/puerto-am-bi)
 - **GitHub Pages no puede hostear este dashboard**: solo sirve archivos estáticos y aquí el backend Python/FastAPI calcula los datos del Excel y alimenta el chat.
 
 ## Estado del workspace

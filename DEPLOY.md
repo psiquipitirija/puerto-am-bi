@@ -37,6 +37,8 @@ Si ya hiciste `git init` y el commit desde esta sesión, solo necesitas las dos 
 
 ### 3. Crea el servicio en Render
 1. Entra a https://dashboard.render.com/ y haz login con GitHub.
+   Atajo: abre https://render.com/deploy?repo=https://github.com/psiquipitirija/puerto-am-bi
+   (el botón «Deploy to Render» del README hace lo mismo).
 2. **New → Web Service** → selecciona `puerto-am-bi` → **Connect**.
 3. Render detecta automáticamente `render.yaml`:
    - Runtime: Python 3.12.7
