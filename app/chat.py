@@ -5,7 +5,10 @@ leyendo Puerto_AM_Base_Datos_DEMO.xlsx. Si el dato no existe en ese payload,
 la respuesta lo dice explicitamente y no inventa nada.
 
 Modo por defecto: motor local determinista (sin servicio externo, sin API key).
-Opcional: modelo externo con contexto cerrado si se define PUERTOAM_LLM_API_KEY.
+Opcional: si se define PUERTOAM_LLM_API_KEY, un modelo externo solo reescribe la
+pregunta para entenderla mejor; NUNCA ve los datos del Excel y NUNCA da cifras.
+Todos los números siguen siendo calculados por _local_answer() desde el payload.
+Compatibles: OpenAI (gpt-4o-mini) y OpenRouter (sk-or-... / openai/gpt-4o-mini).
 """
 from __future__ import annotations
 
@@ -324,8 +327,10 @@ def _top_sales_answer(message: str, data: dict[str, Any]) -> dict[str, Any]:
 
 _BIG_SALE_PHRASES = (
     "venta mas grande", "venta mayor", "mayor venta", "pedido mas grande",
-    "pedido mayor", "monto mas alto", "venta mas alta", "venta mas cara",
-    "ingreso mas alto", "venta maxima", "record de ventas",
+    "pedido mayor", "pedido mas caro", "pedido mas alto", "monto mas alto",
+    "monto mas grande", "importe mas alto", "venta mas alta", "venta mas cara",
+    "facturo mas", "venta facturo mas", "ingreso mas alto", "venta maxima",
+    "record de ventas",
 )
 _SMALL_SALE_PHRASES = (
     "venta mas pequena", "venta mas baja", "menor venta", "venta minima",
@@ -333,7 +338,9 @@ _SMALL_SALE_PHRASES = (
 )
 _TOP_SALES_PHRASES = (
     "top ventas", "top de ventas", "top pedidos", "top de pedidos",
-    "mejores ventas", "ventas mas altas", "ventas mas grandes",
+    "top 5 ventas", "top 5 de ventas", "las 5 ventas mas altas",
+    "cinco ventas mas grandes", "mejores ventas", "ventas mas altas",
+    "ventas mas grandes",
 )
 
 
@@ -466,50 +473,107 @@ def _local_answer(message: str, data: dict[str, Any]) -> dict[str, Any]:
     return {"respuesta": SIN_DATO, "fuentes": []}
 
 
-def _llm_answer(message: str, data: dict[str, Any]) -> str | None:
-    """Opcional: modelo externo con contexto cerrado. Sin clave no se llama."""
+_INTERPRETER_SYSTEM = """Eres un normalizador de preguntas para el asistente de un dashboard de ventas.
+NO respondas la pregunta. Solo reescríbela de forma clara, breve y canónica en español de México,
+conservando la intención y los filtros explícitos (mes, categoría, producto, canal, forma de pago).
+No agregues cifras, nombres ni datos que el usuario no escribió.
+
+Usa estas frases canónicas cuando aplique:
+- "¿Cuánto vendimos en total?"
+- "¿Cuántos pedidos hay?"
+- "¿Cuál es el ticket promedio?"
+- "¿Cuántas unidades se vendieron?"
+- "¿Cuáles son los costos totales?"
+- "¿Cuál es la utilidad bruta?"
+- "¿Cuál es el margen bruto?"
+- "¿Cómo fue el crecimiento mensual?"
+- "¿Cuál es el cumplimiento de metas?"
+- "¿Cuál fue la venta más grande?" (también para "la más alta", "el pedido más caro", "el pedido más alto", "el monto mayor", "el importe más alto", "lo que más facturó", "el récord")
+- "¿Cuál fue la venta más pequeña?"
+- "Top ventas" (también para "top 5 de ventas", "las ventas más altas", "los mejores pedidos"; NUNCA para productos ni categorías)
+- "¿Cuáles son las categorías que más venden?"
+- "¿Cuáles son los productos destacados?"
+- "¿Cómo se distribuyen las ventas por canal?"
+- "¿Cuáles son los métodos de pago?"
+- "¿Cuál fue el mejor mes?"
+
+Si el usuario menciona un mes, inclúyelo como "en marzo", "en febrero", etc.
+Si menciona una categoría, producto, canal o forma de pago, inclúyelo como "de <nombre>".
+Si pide algo ajeno a ventas, productos o metas (clientes, empleados, sueldos, pronósticos, opiniones),
+devuelve exactamente SIN_DATO. Devuelve SOLO la pregunta reescrita, sin comillas ni explicación."""
+
+
+def _llm_endpoint() -> str:
+    configured = os.getenv("PUERTOAM_LLM_BASE_URL")
+    if configured:
+        return configured
+    key = os.getenv("PUERTOAM_LLM_API_KEY", "")
+    return ("https://openrouter.ai/api/v1/chat/completions" if key.startswith("sk-or-")
+            else "https://api.openai.com/v1/chat/completions")
+
+
+def _llm_model() -> str:
+    configured = os.getenv("PUERTOAM_LLM_MODEL")
+    if configured:
+        return configured
+    key = os.getenv("PUERTOAM_LLM_API_KEY", "")
+    return "openai/gpt-4o-mini" if key.startswith("sk-or-") else "gpt-4o-mini"
+
+
+def _interpret_message(message: str) -> str | None:
+    """Opcional: el modelo solo interpreta la intención; nunca ve los datos del Excel."""
     api_key = os.getenv("PUERTOAM_LLM_API_KEY")
     if not api_key:
         return None
-    model = os.getenv("PUERTOAM_LLM_MODEL", "gpt-4o-mini")
-    system = PERSONA + "\n\nDATOS DISPONIBLES (JSON):\n" + json.dumps(build_evidence(data), ensure_ascii=False)
     body = json.dumps({
-        "model": model,
+        "model": _llm_model(),
         "temperature": 0,
-        "max_tokens": 400,
+        "max_tokens": 120,
         "messages": [
-            {"role": "system", "content": system},
+            {"role": "system", "content": _INTERPRETER_SYSTEM},
             {"role": "user", "content": message},
         ],
     }).encode("utf-8")
     request = urllib.request.Request(
-        "https://api.openai.com/v1/chat/completions",
+        _llm_endpoint(),
         data=body,
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://puerto-am-bi.local",
+            "X-Title": "Puerto A&M Copiloto",
+        },
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with urllib.request.urlopen(request, timeout=15) as response:
             payload = json.load(response)
-        content = payload["choices"][0]["message"]["content"].strip()
-        return content or None
-    except (urllib.error.URLError, KeyError, IndexError, json.JSONDecodeError):
+        content = payload["choices"][0]["message"]["content"].strip().strip('"').strip()
+    except (urllib.error.URLError, KeyError, IndexError, json.JSONDecodeError, OSError):
         return None
+    if not content or content.upper().startswith("SIN_DATO"):
+        return None
+    return content[:300]
 
 
 def answer_chat(message: str, data: dict[str, Any]) -> dict[str, Any]:
-    llm = _llm_answer(message, data)
-    if llm:
-        return {
-            "respuesta": llm,
-            "fuentes": ["Excel · " + data["meta"]["file"]],
-            "modo": "modelo externo con contexto cerrado",
-            "verificado": False,
-        }
-    result = _local_answer(message, data)
+    """Los números siempre los calcula el motor local; el LLM solo ayuda a entender la pregunta."""
+    base = _local_answer(message, data)
+    interpreted = _interpret_message(message)
+    result = base
+    mode = "motor local sobre datos del Excel"
+
+    if interpreted:
+        candidate = _local_answer(interpreted, data)
+        base_failed = "No tengo ese dato" in base["respuesta"] or not base["fuentes"]
+        candidate_ok = "No tengo ese dato" not in candidate["respuesta"] and bool(candidate["fuentes"])
+        if base_failed and candidate_ok:
+            result = candidate
+        mode = "interpretación con modelo + cálculo local sobre el Excel"
+
     return {
         "respuesta": result["respuesta"],
         "fuentes": result["fuentes"],
-        "modo": "motor local sobre datos del Excel",
+        "modo": mode,
         "verificado": True,
     }

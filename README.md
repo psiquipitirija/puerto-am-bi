@@ -145,12 +145,12 @@ Ejemplos que sí responde con datos: «¿Cuánto vendimos en total?», «¿Cuán
 ### Modo de ejecución
 
 - **Por defecto (sin configuración):** motor local determinista en `app/chat.py`. No llama a ningún servicio externo, no necesita API key y siempre cita cifras verificables.
-- **Opcional:** si defines `PUERTOAM_LLM_API_KEY`, se usa un modelo externo con `temperature=0`, un system prompt con la regla estricta y un contexto cerrado con solo los datos del Excel (resúmenes + máximo 40 filas de detalle + venta mayor y menor calculadas sobre todas las filas). Si falla la llamada, cae automáticamente al motor local. Copia `.env.example` como referencia y exporta las variables antes de iniciar el servidor.
+- **Opcional:** si defines `PUERTOAM_LLM_API_KEY`, un modelo externo con `temperature=0` **solo reescribe la pregunta** para entender mejor formas de decir lo mismo («dame la más alta», «el pedido más caro», «top 5 de ventas»). El modelo **no recibe los datos del Excel** y **nunca entrega cifras**: la respuesta siempre la calcula el motor local y cita sus fuentes. Si falla la llamada, cae automáticamente al motor local. Copia `.env.example` como referencia y exporta las variables antes de iniciar el servidor.
+- Compatible con OpenAI (`gpt-4o-mini`) y con OpenRouter (llaves `sk-or-...`; modelo `openai/gpt-4o-mini`). **Nunca subas la llave al repositorio.**
 
 ```powershell
-# Ejemplo (solo si quieres el modelo externo)
-$env:PUERTOAM_LLM_API_KEY = "tu-clave"
-$env:PUERTOAM_LLM_MODEL = "gpt-4o-mini"
+# Ejemplo con OpenRouter
+$env:PUERTOAM_LLM_API_KEY = "tu-clave-sk-or"
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8124
 ```
 
@@ -178,4 +178,4 @@ python scripts/probar_chat.py --local    # sin servidor, llama al motor directo
 
 Los importes no incluyen impuestos ni inflación. Las metas son supuestos ficticios. La demo no implementa autenticación: es un panel administrativo local para práctica; si se integra en un portal público, debe colocarse detrás de login y separarse de la vista pública.
 
-El asistente no consulta internet ni bases de datos externas. El modo LLM opcional sí envía el contexto calculado al proveedor configurado; no lo actives si los datos fueran confidenciales. Las sugerencias del chat son preguntas de ejemplo, no datos.
+El asistente no consulta internet ni bases de datos externas. El modo LLM opcional solo envía el texto de la pregunta al proveedor configurado; **nunca envía los datos del Excel ni las cifras calculadas**. Las sugerencias del chat son preguntas de ejemplo, no datos.
