@@ -7,7 +7,7 @@ pública y estable, corre FastAPI sin Docker y se conecta directo a un repo de G
 > estático; aquí el backend Python calcula los KPIs desde el Excel y responde el chat.
 > El repo ya existe en https://github.com/psiquipitirija/puerto-am-bi y mientras tanto
 > hay una demo pública temporal en
-> https://patients-conclusions-potentially-homeland.trycloudflare.com (depende de que la
+> https://lamps-contacted-refine-camel.trycloudflare.com (depende de que la
 > PC y el túnel sigan encendidos).
 
 ## Opción recomendada: Render + GitHub

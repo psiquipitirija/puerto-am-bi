@@ -9,7 +9,7 @@ Dashboard corporativo conectado a un archivo Excel real. Los indicadores, gráfi
 ## Publicación
 
 - **Repositorio:** https://github.com/psiquipitirija/puerto-am-bi
-- **Demo pública temporal:** https://patients-conclusions-potentially-homeland.trycloudflare.com
+- **Demo pública temporal:** https://lamps-contacted-refine-camel.trycloudflare.com
 - El enlace HTTPS funciona mientras sigan activos el servidor local y el túnel de Cloudflare. Para una URL permanente, haz clic en el botón o sigue `DEPLOY.md` (el repo ya trae `render.yaml`).
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/psiquipitirija/puerto-am-bi)
@@ -33,7 +33,7 @@ puerto-am-bi/
 ├── scripts/
 │   ├── generar_excel.py        # Genera la base de 360 registros
 │   ├── verificar_conexion.py   # Prueba real de lectura → edición → actualización
-│   └── probar_chat.py          # Prueba 20 preguntas del asistente (--local sin servidor)
+│   └── probar_chat.py          # Prueba 24 preguntas del asistente (--local sin servidor)
 ├── static/
 │   ├── index.html
 │   ├── styles.css
@@ -132,20 +132,20 @@ Es un analista de datos con personalidad ejecutiva, cálida y breve. Responde en
 ### Regla estricta
 
 1. El backend construye el payload con `build_dashboard(filtros)` y se lo pasa al motor de chat.
-2. El motor **solo** puede leer ese payload: KPIs, tendencias, categorías, productos, metas, canales, métodos de pago y filas filtradas.
+2. El motor **solo** puede leer ese payload: KPIs, tendencias, categorías, productos, metas, canales, métodos de pago y filas filtradas. La venta mayor y la menor se calculan sobre **todas** las filas filtradas, no solo sobre las 40 filas de muestra.
 3. Si el dato no existe (clientes, empleados, sueldos, impuestos, proyecciones, meses sin registros, etc.), responde exactamente:
 
-   > No tengo ese dato en el Excel cargado. Solo respondo con información de las hojas Ventas, Productos y Metas. Puedo ayudarte con ventas, pedidos, ticket promedio, unidades, costos, utilidad, margen, crecimiento, metas, categorías, productos, canales y métodos de pago.
+   > No tengo ese dato en el Excel cargado. Solo respondo con información de las hojas Ventas, Productos y Metas. Puedo ayudarte con ventas, pedidos, ticket promedio, unidades, costos, utilidad, margen, crecimiento, metas, categorías, productos, canales, métodos de pago y con la venta más grande o más pequeña calculada de cada fila.
 
 4. El frontend envía `{mensaje, ...state.filters}` a `POST /api/chat`, así que el chat responde sobre **el mismo subconjunto** que ves en los KPIs y gráficos. Al cambiar los filtros, la cabecera del chat muestra el periodo/producto/categoría/canal activo.
 5. Al pulsar **Actualizar datos**, la conversación se reinicia para que ninguna respuesta antigua quede con cifras desactualizadas.
 
-Ejemplos que sí responde con datos: «¿Cuánto vendimos en total?», «¿Cuánto vendimos en marzo?», «¿Cómo fue febrero comparado con enero?», «¿Cuál es el margen bruto?», «¿Cuál es el cumplimiento de metas?», «¿Cuánto vendió la categoría Oficina?», «¿Cuáles son los métodos de pago?».
+Ejemplos que sí responde con datos: «¿Cuánto vendimos en total?», «¿Cuánto vendimos en marzo?», «¿Cómo fue febrero comparado con enero?», «¿Cuál es el margen bruto?», «¿Cuál es el cumplimiento de metas?», «¿Cuánto vendió la categoría Oficina?», «¿Cuáles son los métodos de pago?», «¿Cuál fue la venta más grande?», «¿Cuál fue la venta más pequeña?», «¿Cuál fue la venta más grande en marzo?», «Top ventas». Las preguntas de venta individual devuelven pedido, fecha, producto, categoría, unidades, canal y forma de pago de la fila correspondiente.
 
 ### Modo de ejecución
 
 - **Por defecto (sin configuración):** motor local determinista en `app/chat.py`. No llama a ningún servicio externo, no necesita API key y siempre cita cifras verificables.
-- **Opcional:** si defines `PUERTOAM_LLM_API_KEY`, se usa un modelo externo con `temperature=0`, un system prompt con la regla estricta y un contexto cerrado con solo los datos del Excel (resúmenes + máximo 40 filas de detalle). Si falla la llamada, cae automáticamente al motor local. Copia `.env.example` como referencia y exporta las variables antes de iniciar el servidor.
+- **Opcional:** si defines `PUERTOAM_LLM_API_KEY`, se usa un modelo externo con `temperature=0`, un system prompt con la regla estricta y un contexto cerrado con solo los datos del Excel (resúmenes + máximo 40 filas de detalle + venta mayor y menor calculadas sobre todas las filas). Si falla la llamada, cae automáticamente al motor local. Copia `.env.example` como referencia y exporta las variables antes de iniciar el servidor.
 
 ```powershell
 # Ejemplo (solo si quieres el modelo externo)
@@ -170,7 +170,7 @@ python scripts/probar_chat.py --local    # sin servidor, llama al motor directo
 - ✅ Exportación CSV/XLSX con `Content-Disposition` correcto.
 - ✅ Auditoría CDP en 1600, 1440, 1280, 1024, 900, 768, 600 y 390 px: sin overflow horizontal, sin recortes y 6 gráficos activos. Sin errores de consola.
 - ✅ Menú móvil, tema oscuro, refresco y exportación probados en navegador a 390 px.
-- ✅ Asistente probado con 20 preguntas: métricas globales, meses, comparaciones, metas, categorías, productos, canales, métodos de pago, filtros activos y tres preguntas sin dato que devuelven `SIN_DATO` sin inventar. Reproducible con `python scripts/probar_chat.py`.
+- ✅ Asistente probado con 24 preguntas: métricas globales, meses, comparaciones, metas, categorías, productos, canales, métodos de pago, venta mayor/menor (incluida «en marzo»), top ventas, filtros activos y tres preguntas sin dato que devuelven `SIN_DATO` sin inventar. Reproducible con `python scripts/probar_chat.py`.
 - ✅ Chat verificado en navegador de escritorio y a 390 px: sugerencias, envío con Enter, citas de fuente, botón flotante, reinicio y respuesta con el filtro de enero ($177,387). Sin errores de consola.
 - ✅ Auditoría CDP repetida con la sección del chat en 1600…390 px: sin overflow horizontal ni recortes.
 

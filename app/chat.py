@@ -39,7 +39,8 @@ REGLA ABSOLUTA (no negociable):
 SIN_DATO = (
     "No tengo ese dato en el Excel cargado. Solo respondo con información de las hojas "
     "Ventas, Productos y Metas. Puedo ayudarte con ventas, pedidos, ticket promedio, unidades, "
-    "costos, utilidad, margen, crecimiento, metas, categorías, productos, canales y métodos de pago."
+    "costos, utilidad, margen, crecimiento, metas, categorías, productos, canales, métodos de pago "
+    "y con la venta más grande o más pequeña calculada de cada fila."
 )
 
 _MONTH_NAMES = {
@@ -91,6 +92,13 @@ def has_any(text: str, phrases) -> bool:
     return any(has(text, phrase) for phrase in phrases)
 
 
+def _extreme_row(rows: list[dict[str, Any]], biggest: bool = True) -> dict[str, Any] | None:
+    """Fila de mayor o menor ingreso dentro de las filas dadas."""
+    if not rows:
+        return None
+    return max(rows, key=lambda row: row["ingreso"]) if biggest else min(rows, key=lambda row: row["ingreso"])
+
+
 def build_evidence(data: dict[str, Any]) -> dict[str, Any]:
     """Contexto cerrado para el modelo externo: únicamente cifras del Excel."""
     return {
@@ -108,14 +116,17 @@ def build_evidence(data: dict[str, Any]) -> dict[str, Any]:
             "por_metodo_pago": data["charts"].get("metodos_pago", []),
         },
         "opciones_de_filtro": data["options"],
+        "venta_mayor": _extreme_row(data["table"], biggest=True),
+        "venta_menor": _extreme_row(data["table"], biggest=False),
         "detalle_ventas": [
             {key: row[key] for key in ("fecha", "pedido", "producto", "categoria", "cantidad",
                                        "ingreso", "costo", "utilidad", "canal", "pago")}
             for row in data["table"][:40]
         ],
         "nota_detalle": (
-            f"Se muestran 40 de {len(data['table'])} filas filtradas. "
-            "Si necesitas un dato de una fila no mostrada, responde SIN_DATO."
+            f"Se muestran 40 de {len(data['table'])} filas filtradas; además se incluyen la venta "
+            "mayor y la menor calculadas sobre todas las filas. "
+            "Si necesitas otra fila no mostrada, responde SIN_DATO."
         ),
         "SIN_DATO": SIN_DATO,
     }
@@ -235,6 +246,97 @@ def _listing_answer(kind: str, data: dict[str, Any]) -> dict[str, Any]:
     return {"respuesta": "\n".join(lines), "fuentes": ["Ventas: Cantidad × Precio unitario"]}
 
 
+_SALE_FIELDS = {
+    "producto": "producto", "categoria": "categoria", "canal": "canal",
+    "metodo de pago": "pago",
+}
+
+
+def _scoped_rows(message: str, data: dict[str, Any]) -> tuple[list[dict[str, Any]], str, bool]:
+    """Filas del Excel aplicando mes y/o entidad mencionados en la pregunta.
+
+    Devuelve (filas, texto de alcance, sin_dato). El alcance se usa para decir
+    explícitamente si la respuesta es, por ejemplo, de marzo o de una categoría.
+    """
+    rows = list(data.get("table") or [])
+    scope: list[str] = []
+    months = _months(message)
+    if months:
+        rows = [row for row in rows if any(row["fecha"].startswith(key) for key in months)]
+        if not rows:
+            return [], "", True
+        labels = {item["key"]: item["label"] for item in data["charts"].get("tendencia", [])}
+        scope.append("en " + ", ".join(labels.get(key, key) for key in months))
+
+    # Solo aplicamos la entidad si la pregunta la introduce con "de", "del",
+    # "en", "por" o "para": evita tomar "venta" como si fuera un producto.
+    if re.search(r"\b(de|del|en|por|para)\b", plain(message)):
+        entities = _entities(normalize(message), data["options"])
+        if entities:
+            kind, value = max(entities, key=lambda item: len(normalize(item[1])))
+            field = _SALE_FIELDS[kind]
+            filtered = [row for row in rows if normalize(row[field]) == normalize(value)]
+            if not filtered:
+                return [], "", True
+            rows = filtered
+            scope.append(f"de {kind} «{value}»")
+    return rows, (" " + " ".join(scope) if scope else ""), False
+
+
+def _sale_extreme_answer(message: str, data: dict[str, Any], biggest: bool = True) -> dict[str, Any]:
+    """Venta individual de mayor o menor ingreso, calculada desde la hoja Ventas."""
+    rows, scope, missing = _scoped_rows(message, data)
+    if missing or not rows:
+        return {"respuesta": SIN_DATO, "fuentes": []}
+    row = _extreme_row(rows, biggest=biggest)
+    word = "mayor" if biggest else "menor"
+    respuesta = (
+        f"La venta {word} del periodo{scope}: {money(row['ingreso'])} "
+        f"(pedido {row['pedido']} del {row['fecha']}, {row['producto']}, "
+        f"categoría {row['categoria']}, {number(row['cantidad'])} unidades, "
+        f"canal {row['canal']}, pago {row['pago']}; hoja Ventas)."
+    )
+    return {
+        "respuesta": respuesta,
+        "fuentes": [
+            "Ventas: Pedido, Fecha, Producto, Categoría y Cantidad",
+            "Ventas: Cantidad × Precio unitario",
+        ],
+    }
+
+
+def _top_sales_answer(message: str, data: dict[str, Any]) -> dict[str, Any]:
+    """Listado de las ventas individuales más altas, calculado desde la hoja Ventas."""
+    rows, scope, missing = _scoped_rows(message, data)
+    if missing or not rows:
+        return {"respuesta": SIN_DATO, "fuentes": []}
+    top = sorted(rows, key=lambda row: row["ingreso"], reverse=True)[:5]
+    lines = [f"Top {len(top)} ventas por ingreso{scope} (hoja Ventas):"]
+    lines += [
+        f"{index}. {row['pedido']} · {row['fecha']} · {money(row['ingreso'])} — {row['producto']}"
+        for index, row in enumerate(top, start=1)
+    ]
+    return {
+        "respuesta": "\n".join(lines),
+        "fuentes": ["Ventas: Pedido, Fecha, Producto y Cantidad × Precio unitario"],
+    }
+
+
+_BIG_SALE_PHRASES = (
+    "venta mas grande", "venta mayor", "mayor venta", "pedido mas grande",
+    "pedido mayor", "monto mas alto", "venta mas alta", "venta mas cara",
+    "ingreso mas alto", "venta maxima", "record de ventas",
+)
+_SMALL_SALE_PHRASES = (
+    "venta mas pequena", "venta mas baja", "menor venta", "venta minima",
+    "pedido mas pequeno", "monto mas bajo", "ingreso mas bajo",
+)
+_TOP_SALES_PHRASES = (
+    "top ventas", "top de ventas", "top pedidos", "top de pedidos",
+    "mejores ventas", "ventas mas altas", "ventas mas grandes",
+)
+
+
 def _local_answer(message: str, data: dict[str, Any]) -> dict[str, Any]:
     text = normalize(message)
     if not text:
@@ -252,8 +354,9 @@ def _local_answer(message: str, data: dict[str, Any]) -> dict[str, Any]:
     if has_any(text, ("ayuda", "que puedes hacer", "como funciona", "que sabes")):
         return {
             "respuesta": "Puedo responder sobre ingresos, pedidos, ticket promedio, unidades, costos, "
-                         "utilidad, margen, crecimiento mensual, metas, categorías, productos, canales "
-                         "y métodos de pago. Si el dato no está en el Excel, te lo digo sin inventarlo.",
+                         "utilidad, margen, crecimiento mensual, metas, categorías, productos, canales, "
+                         "métodos de pago y la venta más grande o más pequeña. Si el dato no está en el "
+                         "Excel, te lo digo sin inventarlo.",
             "fuentes": [],
         }
 
@@ -269,18 +372,27 @@ def _local_answer(message: str, data: dict[str, Any]) -> dict[str, Any]:
             "fuentes": ["Metadatos del archivo Excel"],
         }
 
-    # 3. Meses explícitos.
+    # 3. Ventas individuales: se calculan fila por fila sobre la hoja Ventas.
+    #    Van antes que los meses para permitir "venta más grande en marzo".
+    if has_any(text, _BIG_SALE_PHRASES):
+        return _sale_extreme_answer(message, data, biggest=True)
+    if has_any(text, _SMALL_SALE_PHRASES):
+        return _sale_extreme_answer(message, data, biggest=False)
+    if has_any(text, _TOP_SALES_PHRASES):
+        return _top_sales_answer(message, data)
+
+    # 4. Meses explícitos.
     months = _months(message)
     if months:
         return _month_answer(months, data, message)
 
-    # 4. Entidades concretas (producto / categoría / canal / método de pago).
+    # 5. Entidades concretas (producto / categoría / canal / método de pago).
     entities = _entities(text, data["options"])
     if entities:
         kind, value = max(entities, key=lambda item: len(normalize(item[1])))
         return _entity_answer(kind, value, data)
 
-    # 5. Listados y ranking.
+    # 6. Listados y ranking.
     if has_any(text, ("top", "mas vendido", "destacado", "ranking", "mejor vendido")):
         return _listing_answer("producto", data)
     if has_any(text, ("categoria", "categorias")):
@@ -290,7 +402,7 @@ def _local_answer(message: str, data: dict[str, Any]) -> dict[str, Any]:
     if has_any(text, ("metodo de pago", "metodos de pago", "forma de pago")):
         return _listing_answer("metodo de pago", data)
 
-    # 6. Mejor / peor mes.
+    # 7. Mejor / peor mes.
     if has_any(text, ("cual mes", "que mes", "mejor mes", "peor mes")):
         if not trend:
             return {"respuesta": SIN_DATO, "fuentes": []}
@@ -303,12 +415,12 @@ def _local_answer(message: str, data: dict[str, Any]) -> dict[str, Any]:
             "fuentes": ["Ventas: Fecha, Cantidad × Precio unitario"],
         }
 
-    # 7. Temas fuera del Excel: responder SIN_DATO antes que cualquier métrica.
+    # 8. Temas fuera del Excel: responder SIN_DATO antes que cualquier métrica.
     if has_any(text, ("cliente", "empleado", "sueldo", "impuesto", "predice", "pronostico",
                       "proyeccion", "futuro", "invertir", "opinion", "recomiendas")):
         return {"respuesta": SIN_DATO, "fuentes": []}
 
-    # 8. Métricas globales del periodo filtrado.
+    # 9. Métricas globales del periodo filtrado.
     for metric, words in _METRIC_WORDS.items():
         if has_any(text, words):
             if metric == "ingresos":

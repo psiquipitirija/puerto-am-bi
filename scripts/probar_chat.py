@@ -26,6 +26,10 @@ QUESTIONS = [
     "Hola",
     "¿Cuánto vendimos en total?",
     "¿Cuántos pedidos hay?",
+    "¿Cuál fue la venta más grande?",
+    "¿Cuál fue la venta más pequeña?",
+    "¿Cuál fue la venta más grande en marzo?",
+    "Top ventas",
     "¿Cuál es el ticket promedio?",
     "¿Cuál es la utilidad bruta?",
     "¿Cuál es el margen bruto?",
@@ -80,6 +84,10 @@ def main() -> None:
         print(f"\nP: {question}")
         print(f"R: {answer}")
         print(f"   modo={result['modo']} fuentes={result['fuentes']}")
+        if question == "¿Cuál fue la venta más grande?" and (
+            "No tengo ese dato" in result["respuesta"] or "pedido" not in result["respuesta"].lower()
+        ):
+            failures.append(question)
         if question in {
             "¿Quién es el cliente más importante?",
             "¿Qué empleados tienen el mejor sueldo?",
