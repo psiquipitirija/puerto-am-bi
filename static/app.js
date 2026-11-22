@@ -32,14 +32,14 @@ const fmtPct = new Intl.NumberFormat('es-MX', { minimumFractionDigits: 1, maximu
 
 const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const COLORS = () => ({
-  petroleum: cssVar('--petroleum-3') || '#14607a',
-  deep: cssVar('--petroleum') || '#0b3948',
-  gold: cssVar('--gold') || '#c7a03c',
-  gold2: cssVar('--gold-2') || '#e0bd63',
-  green: cssVar('--green') || '#1d8a67',
-  red: cssVar('--red') || '#c45d45',
-  grid: cssVar('--chart-grid') || '#e9eef1',
-  text: cssVar('--chart-text') || '#83939c'
+  petroleum: cssVar('--peacock') || '#0f7c8c',
+  deep: cssVar('--petroleum') || '#08090c',
+  gold: cssVar('--gold') || '#b8891f',
+  gold2: cssVar('--gold-2') || '#d4af37',
+  green: cssVar('--green') || '#1f8a6b',
+  red: cssVar('--red') || '#b8503b',
+  grid: cssVar('--chart-grid') || '#dedbd3',
+  text: cssVar('--chart-text') || '#77746c'
 });
 
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({
@@ -228,7 +228,7 @@ function baseOptions(c = COLORS()) {
       tooltip: {
         backgroundColor: c.deep,
         titleColor: '#fff',
-        bodyColor: '#e6f1f4',
+        bodyColor: '#efe8d6',
         padding: 11,
         cornerRadius: 8,
         displayColors: true,
@@ -328,7 +328,7 @@ function renderCharts(charts) {
       labels: cats.map((item) => item.label),
       datasets: [{
         data: cats.map((item) => item.value),
-        backgroundColor: [c.deep, c.gold, c.petroleum, c.gold2, '#5b8b9c', '#a7c3cc', '#8a7330'],
+        backgroundColor: [c.deep, c.gold, c.petroleum, c.gold2, '#35bdd1', '#9a8450', '#5d6f76'],
         borderColor: cssVar('--surface'), borderWidth: 3, hoverOffset: 6
       }]
     },
@@ -373,7 +373,7 @@ function renderCharts(charts) {
     data: {
       labels: goals.map((item) => item.label),
       datasets: [
-        { label: 'Meta', data: goals.map((item) => item.meta), backgroundColor: '#9db3bd', borderRadius: 5, maxBarThickness: 46 },
+        { label: 'Meta', data: goals.map((item) => item.meta), backgroundColor: '#a98c43', borderRadius: 5, maxBarThickness: 46 },
         { label: 'Real', data: goals.map((item) => item.real), backgroundColor: c.gold, borderRadius: 5, maxBarThickness: 46 }
       ]
     },
@@ -393,7 +393,7 @@ function renderCharts(charts) {
       labels: channels.map((item) => item.label),
       datasets: [{
         data: channels.map((item) => item.value),
-        backgroundColor: [c.deep, c.petroleum, c.gold, c.gold2, '#5b8b9c'],
+        backgroundColor: [c.deep, c.petroleum, c.gold, c.gold2, '#35bdd1'],
         borderRadius: 5, maxBarThickness: 26
       }]
     },
@@ -760,9 +760,9 @@ function bindEvents() {
 
 function initTheme() {
   const saved = localStorage.getItem('puertoam.theme');
-  const theme = saved === 'light' || saved === 'dark'
-    ? saved
-    : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  // El diseño por defecto es gris perlado con encabezados negros.
+  // El tema oscuro sigue disponible solo si la persona lo eligió explícitamente.
+  const theme = saved === 'dark' ? 'dark' : 'light';
   document.documentElement.dataset.theme = theme;
   $('themeButton').querySelector('use').setAttribute('href', theme === 'dark' ? '#i-sun' : '#i-moon');
 }

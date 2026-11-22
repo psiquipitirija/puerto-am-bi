@@ -4,6 +4,8 @@ Dashboard corporativo conectado a un archivo Excel real. Los indicadores, gráfi
 
 > ⚠️ Simulación académica para Top Learning. Todos los clientes, pedidos, productos, precios y metas son inventados. Ninguna cifra representa operaciones reales de Puerto A&M. Importes en MXN.
 
+> 🎨 Diseño: fondo gris perlado, encabezados negros, dorado y destellos de azul pavo. Identificación visible bajo el encabezado: «Practica de Mariana Horta».
+
 ## Publicación
 
 - **Repositorio:** https://github.com/psiquipitirija/puerto-am-bi
