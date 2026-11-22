@@ -4,6 +4,13 @@ Dashboard corporativo conectado a un archivo Excel real. Los indicadores, gráfi
 
 > ⚠️ Simulación académica para Top Learning. Todos los clientes, pedidos, productos, precios y metas son inventados. Ninguna cifra representa operaciones reales de Puerto A&M. Importes en MXN.
 
+## Publicación
+
+- **Repositorio:** https://github.com/psiquipitirija/puerto-am-bi
+- **Demo pública temporal:** https://patients-conclusions-potentially-homeland.trycloudflare.com
+- El enlace HTTPS funciona mientras sigan activos el servidor local y el túnel de Cloudflare. Para una URL permanente, sigue `DEPLOY.md` y crea el Web Service en Render (el repo ya trae `render.yaml`).
+- **GitHub Pages no puede hostear este dashboard**: solo sirve archivos estáticos y aquí el backend Python/FastAPI calcula los datos del Excel y alimenta el chat.
+
 ## Estado del workspace
 
 Se inspeccionó la carpeta `../stilis-landing`: es un landing de **Stilís** (React + Vite) sin relación con Puerto A&M ni con un chatbot. No se modificó. Por ello este dashboard se construyó como **aplicación independiente**, lista para integrarse después como sección administrativa de un portal Puerto A&M.

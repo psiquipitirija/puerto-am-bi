@@ -3,6 +3,13 @@
 Recomendación para compartirlo con una clase: **Render (plan gratis)**. Da una URL HTTPS
 pública y estable, corre FastAPI sin Docker y se conecta directo a un repo de GitHub.
 
+> **Nota sobre GitHub Pages:** no sirve para este proyecto. Pages solo publica HTML/CSS/JS
+> estático; aquí el backend Python calcula los KPIs desde el Excel y responde el chat.
+> El repo ya existe en https://github.com/psiquipitirija/puerto-am-bi y mientras tanto
+> hay una demo pública temporal en
+> https://patients-conclusions-potentially-homeland.trycloudflare.com (depende de que la
+> PC y el túnel sigan encendidos).
+
 ## Opción recomendada: Render + GitHub
 
 ### 1. Crea el repositorio en GitHub
