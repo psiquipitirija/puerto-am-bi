@@ -1,14 +1,37 @@
 # Despliegue web de Puerto A&M | Business Intelligence
 
-Recomendación para compartirlo con una clase: **Render (plan gratis)**. Da una URL HTTPS
-pública y estable, corre FastAPI sin Docker y se conecta directo a un repo de GitHub.
+**Liga pública definitiva (GitHub Pages):**
+https://psiquipitirija.github.io/puerto-am-bi/
 
-> **Nota sobre GitHub Pages:** no sirve para este proyecto. Pages solo publica HTML/CSS/JS
-> estático; aquí el backend Python calcula los KPIs desde el Excel y responde el chat.
-> El repo ya existe en https://github.com/psiquipitirija/puerto-am-bi y mientras tanto
-> hay una demo pública temporal en
-> https://lamps-contacted-refine-camel.trycloudflare.com (depende de que la
-> PC y el túnel sigan encendidos).
+Es una versión 100 % estática: el dashboard lee el mismo Excel exportado a
+`data/dashboard.json` y calcula en el navegador los KPIs, gráficas, filtros,
+exportaciones y respuestas del chat. No depende de que tu PC esté encendida.
+El Excel original también queda publicado en
+https://psiquipitirija.github.io/puerto-am-bi/data/Puerto_AM_Base_Datos_DEMO.xlsx
+y en el repositorio `data/Puerto_AM_Base_Datos_DEMO.xlsx`.
+
+> El backend Python/FastAPI sigue siendo la versión completa (con intérprete de
+> preguntas opcional). Puedes publicarlo en Render cuando quieras; mientras tanto,
+> la demo temporal https://lamps-contacted-refine-camel.trycloudflare.com depende
+> de que la PC y el túnel sigan encendidos.
+
+## Actualizar la versión de GitHub Pages
+
+Después de editar el Excel o el código:
+
+```powershell
+python scripts/generar_estatico.py
+# Revisa la carpeta site/ (incluye site/data/Puerto_AM_Base_Datos_DEMO.xlsx)
+git worktree add C:\Temp\puerto-am-pages gh-pages
+Copy-Item site\* C:\Temp\puerto-am-pages -Recurse -Force
+git -C C:\Temp\puerto-am-pages add .
+git -C C:\Temp\puerto-am-pages commit -m "Actualiza sitio estático"
+git -C C:\Temp\puerto-am-pages push origin gh-pages
+git worktree remove C:\Temp\puerto-am-pages
+```
+
+En la versión de Pages **no se usa la llave del modelo externo**: quedaría visible
+en el navegador. El chat usa el motor local con sinónimos ampliados.
 
 ## Opción recomendada: Render + GitHub
 

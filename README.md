@@ -8,12 +8,14 @@ Dashboard corporativo conectado a un archivo Excel real. Los indicadores, gráfi
 
 ## Publicación
 
+- **Liga pública permanente (GitHub Pages):** https://psiquipitirija.github.io/puerto-am-bi/
 - **Repositorio:** https://github.com/psiquipitirija/puerto-am-bi
-- **Demo pública temporal:** https://lamps-contacted-refine-camel.trycloudflare.com
-- El enlace HTTPS funciona mientras sigan activos el servidor local y el túnel de Cloudflare. Para una URL permanente, haz clic en el botón o sigue `DEPLOY.md` (el repo ya trae `render.yaml`).
+- **Excel incluido en el repo:** `data/Puerto_AM_Base_Datos_DEMO.xlsx` y también descargable desde https://psiquipitirija.github.io/puerto-am-bi/data/Puerto_AM_Base_Datos_DEMO.xlsx
+- **Demo pública temporal del backend:** https://lamps-contacted-refine-camel.trycloudflare.com (solo mientras sigan activos el servidor local y el túnel de Cloudflare).
+- La versión de Pages calcula todo en el navegador desde el mismo Excel exportado a `site/data/dashboard.json`: no necesita servidor ni llaves. Para regenerarla: `python scripts/generar_estatico.py` y publica `site/` en la rama `gh-pages` (detalles en `DEPLOY.md`).
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/psiquipitirija/puerto-am-bi)
-- **GitHub Pages no puede hostear este dashboard**: solo sirve archivos estáticos y aquí el backend Python/FastAPI calcula los datos del Excel y alimenta el chat.
+- Render sigue disponible para la versión completa con backend Python/FastAPI.
 
 ## Estado del workspace
 
@@ -33,12 +35,17 @@ puerto-am-bi/
 ├── scripts/
 │   ├── generar_excel.py        # Genera la base de 360 registros
 │   ├── verificar_conexion.py   # Prueba real de lectura → edición → actualización
-│   └── probar_chat.py          # Prueba 24 preguntas del asistente (--local sin servidor)
+│   ├── probar_chat.py          # Prueba 24 preguntas del asistente (--local sin servidor)
+│   └── generar_estatico.py     # Genera site/ para GitHub Pages desde el Excel
 ├── static/
 │   ├── index.html
 │   ├── styles.css
 │   ├── app.js
-│   └── vendor/chart.umd.min.js # Chart.js 4.5 local (sin CDN en runtime)
+│   ├── static-bridge.js        # Simula la API en el navegador (versión Pages)
+│   └── vendor/
+│       ├── chart.umd.min.js    # Chart.js 4.5 local (sin CDN en runtime)
+│       └── xlsx.full.min.js    # SheetJS para exportar XLSX en el navegador
+├── site/                       # Generado: versión estática publicada en gh-pages
 ├── requirements.txt
 ├── .env.example               # Variables opcionales del modelo externo
 ├── ejecutar.bat
